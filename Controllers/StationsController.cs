@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BikeappAPI.Models;
+using CsvHelper;
+using System.Globalization;
 
 namespace BikeappAPI.Controllers
 {
@@ -107,6 +109,30 @@ namespace BikeappAPI.Controllers
             }
 
             return CreatedAtAction("GetStation", new { id = station.Id }, station);
+        }
+
+        // POST: api/UploadJoyrneys
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost("CSV")]
+        public async Task<IActionResult> PostStations([FromForm] IFormFile file)
+        {
+            //Read the CSV file data into a MemoryStream
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                //Read the CSV data from the MemoryStream using CsvHelper
+                using (var reader = new StreamReader(stream))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    var records = csv.GetRecords<dynamic>().ToList();
+
+                    // TODO: Process the CSV data
+                }
+            }
+
+            return Ok();
         }
 
         // DELETE: api/Stations/5

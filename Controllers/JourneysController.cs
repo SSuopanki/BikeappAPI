@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BikeappAPI.Models;
+using CsvHelper;
+using System.Globalization;
 
 namespace BikeappAPI.Controllers
 {
@@ -24,10 +26,10 @@ namespace BikeappAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Journey>>> GetJourney()
         {
-          if (_context.Journey == null)
-          {
-              return NotFound();
-          }
+            if (_context.Journey == null)
+            {
+                return NotFound();
+            }
             return await _context.Journey.ToListAsync();
         }
 
@@ -35,10 +37,10 @@ namespace BikeappAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Journey>> GetJourney(int id)
         {
-          if (_context.Journey == null)
-          {
-              return NotFound();
-          }
+            if (_context.Journey == null)
+            {
+                return NotFound();
+            }
             var journey = await _context.Journey.FindAsync(id);
 
             if (journey == null)
@@ -85,10 +87,10 @@ namespace BikeappAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Journey>> PostJourney(Journey journey)
         {
-          if (_context.Journey == null)
-          {
-              return Problem("Entity set 'BikeappContext.Journey'  is null.");
-          }
+            if (_context.Journey == null)
+            {
+                return Problem("Entity set 'BikeappContext.Journey'  is null.");
+            }
             _context.Journey.Add(journey);
             try
             {
@@ -107,6 +109,30 @@ namespace BikeappAPI.Controllers
             }
 
             return CreatedAtAction("GetJourney", new { id = journey.JourneyId }, journey);
+        }
+
+        // POST: api/UploadJoyrneys
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost("CSV")]
+        public async Task<IActionResult> PostJourneys([FromForm] IFormFile file)
+        {
+            //Read the CSV file data into a MemoryStream
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                //Read the CSV data from the MemoryStream using CsvHelper
+                using (var reader = new StreamReader(stream))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    var records = csv.GetRecords<dynamic>().ToList();
+
+                    // TODO: Process the CSV data
+                }
+            }
+
+            return Ok();
         }
 
         // DELETE: api/Journeys/5

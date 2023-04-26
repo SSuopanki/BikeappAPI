@@ -5,8 +5,7 @@
     },
     "mssql1": {
       "type": "mssql",
-      "connectionId": "ConnectionStrings:Bikeapp",
-      "dynamicId": null
+      "connectionId": "ConnectionStrings:Bikeapp"
     }
   }
 }
