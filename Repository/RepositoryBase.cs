@@ -3,23 +3,23 @@
 namespace BikeappAPI.Repository
 {
 
-    public abstract class RepositoryBase<T> where T : class
+    public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class
     {
-        protected DbContext _context;
+        protected DbContext context;
 
         public RepositoryBase(DbContext context)
         {
-            _context = context;
+            this.context = context;
         }
 
         public virtual IQueryable<T> GetAll()
         {
-            return _context.Set<T>();
+            return context.Set<T>();
         }
 
         public virtual T GetById(int id)
         {
-            var entity = _context.Set<T>().Find(id);
+            var entity = context.Set<T>().Find(id);
 
             //TODO?: handle null
             return entity;
@@ -27,18 +27,18 @@ namespace BikeappAPI.Repository
 
         public virtual void Add(T entity)
         {
-            _context.Set<T>().Add(entity);
+            context.Set<T>().Add(entity);
         }
 
         public virtual void Update(T entity)
         {
-            _context.Entry(entity).State = EntityState.Modified;
+            context.Entry(entity).State = EntityState.Modified;
         }
 
         public virtual void Delete(int id)
         {
             var entity = GetById(id);
-            _context.Set<T>().Remove(entity);
+            context.Set<T>().Remove(entity);
         }
     }
 

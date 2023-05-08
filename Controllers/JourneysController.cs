@@ -8,6 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using BikeappAPI.Models;
 using CsvHelper;
 using System.Globalization;
+using System.Data;
+using Microsoft.Data.SqlClient;
+using CsvHelper.Configuration;
+using BikeappAPI.Repositories;
 
 namespace BikeappAPI.Controllers
 {
@@ -15,10 +19,13 @@ namespace BikeappAPI.Controllers
     [ApiController]
     public class JourneysController : ControllerBase
     {
+        private readonly JourneysRepository journeysRepository;
+
         private readonly BikeappContext _context;
 
         public JourneysController(BikeappContext context)
         {
+            journeysRepository = new JourneysRepository(context);
             _context = context;
         }
 
@@ -26,29 +33,25 @@ namespace BikeappAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Journey>>> GetJourney()
         {
-            if (_context.Journey == null)
+            var journeys = await journeysRepository.GetAllJourneys();
+            if (!journeys.Any())
             {
                 return NotFound();
             }
-            return await _context.Journey.ToListAsync();
+            return Ok(journeys);
         }
 
         // GET: api/Journeys/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Journey>> GetJourney(int id)
         {
-            if (_context.Journey == null)
-            {
-                return NotFound();
-            }
-            var journey = await _context.Journey.FindAsync(id);
-
+            var journey = await journeysRepository.GetJourneyById(id);
             if (journey == null)
             {
                 return NotFound();
             }
 
-            return journey;
+            return Ok(journey);
         }
 
         // PUT: api/Journeys/5
@@ -61,11 +64,9 @@ namespace BikeappAPI.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(journey).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await journeysRepository.UpdateJourney(journey);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -87,14 +88,9 @@ namespace BikeappAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Journey>> PostJourney(Journey journey)
         {
-            if (_context.Journey == null)
-            {
-                return Problem("Entity set 'BikeappContext.Journey'  is null.");
-            }
-            _context.Journey.Add(journey);
             try
             {
-                await _context.SaveChangesAsync();
+                await journeysRepository.CreateJourney(journey);
             }
             catch (DbUpdateException)
             {
@@ -116,21 +112,7 @@ namespace BikeappAPI.Controllers
         [HttpPost("CSV")]
         public async Task<IActionResult> PostJourneys([FromForm] IFormFile file)
         {
-            //Read the CSV file data into a MemoryStream
-            using (var stream = new MemoryStream())
-            {
-                await file.CopyToAsync(stream);
-                stream.Position = 0;
 
-                //Read the CSV data from the MemoryStream using CsvHelper
-                using (var reader = new StreamReader(stream))
-                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-                {
-                    var records = csv.GetRecords<dynamic>().ToList();
-
-                    // TODO: Process the CSV data
-                }
-            }
 
             return Ok();
         }
