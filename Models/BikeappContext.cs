@@ -28,7 +28,7 @@ namespace BikeappAPI.Models
 
                 entity.Property(e => e.DepartureStationId).HasColumnName("DepartureStationID");
 
-                entity.Property(e => e.DertureStationName)
+                entity.Property(e => e.DepartureStationName)
                     .IsRequired()
                     .HasMaxLength(50)
                     .IsUnicode(false);

@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+
 namespace BikeappAPI.Repositories
 {
     public class JourneysRepository : IJourneysRepository
@@ -53,6 +54,8 @@ namespace BikeappAPI.Repositories
 
         public async Task UploadJourneysFromCsv(IFormFile file)
         {
+
+
             using (var streamReader = new StreamReader(file.OpenReadStream()))
             {
                 var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -62,6 +65,18 @@ namespace BikeappAPI.Repositories
                 };
 
                 var csvReader = new CsvReader(streamReader, csvConfig);
+                csvReader.Context.RegisterClassMap<JourneyMap>();
+
+                // Read the header record
+                var journeysList = new List<Journey>();
+
+                while (csvReader.Read())
+                {
+                    var journey = csvReader.GetRecord<Journey>();
+                    Guid guid = Guid.NewGuid();
+                    journey.JourneyId = guid;
+                    journeysList.Add(journey);
+                }
 
                 // Read the CSV file and convert each row to a Journey object
                 var journeys = csvReader.GetRecords<Journey>().ToList();
@@ -78,6 +93,23 @@ namespace BikeappAPI.Repositories
         internal Task UpdateJourney(Journey journey)
         {
             throw new NotImplementedException();
+        }
+
+        private class JourneyMap : ClassMap<Journey>
+        {
+            public JourneyMap()
+            {
+                Map(j => j.DepartureDate).Name("Departure");
+                Map(j => j.ReturnDate).Name("Return");
+                Map(j => j.DepartureStationId).Name("Departure station id");
+                Map(j => j.DepartureStationName).Name("Departure station name");
+                Map(j => j.ReturnStationId).Name("Return station id");
+                Map(j => j.ReturnStationName).Name("Return station name");
+                Map(j => j.Distance).Name("Covered distance (m)").TypeConverterOption.Format("0.##");
+                Map(j => j.Duration).Name("Duration (sec.)");
+
+
+            }
         }
     }
 }

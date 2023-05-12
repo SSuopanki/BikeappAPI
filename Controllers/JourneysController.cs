@@ -57,7 +57,7 @@ namespace BikeappAPI.Controllers
         // PUT: api/Journeys/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutJourney(int id, Journey journey)
+        public async Task<IActionResult> PutJourney(Guid id, Journey journey)
         {
             if (id != journey.JourneyId)
             {
@@ -110,9 +110,11 @@ namespace BikeappAPI.Controllers
         // POST: api/UploadJoyrneys
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("CSV")]
-        public async Task<IActionResult> PostJourneys([FromForm] IFormFile file)
+        [RequestSizeLimit(100000000)]
+        public async Task<IActionResult> PostJourneys(IFormFile file)
         {
 
+            await journeysRepository.UploadJourneysFromCsv(file);
 
             return Ok();
         }
@@ -137,7 +139,7 @@ namespace BikeappAPI.Controllers
             return NoContent();
         }
 
-        private bool JourneyExists(int id)
+        private bool JourneyExists(Guid id)
         {
             return (_context.Journey?.Any(e => e.JourneyId == id)).GetValueOrDefault();
         }
