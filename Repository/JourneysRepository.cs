@@ -1,25 +1,23 @@
 ﻿using BikeappAPI.Models;
 using CsvHelper.Configuration;
-using CsvHelper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-
+using Microsoft.Data.SqlClient;
+using System.Data;
+using CsvHelper.TypeConversion;
+using CsvHelper;
 
 namespace BikeappAPI.Repositories
 {
     public class JourneysRepository : IJourneysRepository
     {
         private readonly BikeappContext context;
+        private readonly IConfiguration configuration;
 
-        public JourneysRepository(BikeappContext context)
+        public JourneysRepository(BikeappContext context, IConfiguration configuration)
         {
             this.context = context;
+            this.configuration = configuration;
         }
 
         public async Task<IEnumerable<Journey>> GetAllJourneys()
@@ -29,7 +27,16 @@ namespace BikeappAPI.Repositories
 
         public async Task<Journey> GetJourneyById(int journeyId)
         {
-            return await context.Journey.FindAsync(journeyId);
+            var journey = await context.Journey.FindAsync(journeyId);
+
+            if (journey == null)
+            {
+                //TODO: better null check
+                Console.WriteLine("null journey");
+                return null;
+            }
+
+            return journey;
         }
 
         public async Task CreateJourney(Journey journey)
@@ -37,7 +44,9 @@ namespace BikeappAPI.Repositories
             context.Journey.Add(journey);
             await context.SaveChangesAsync();
         }
-        public async Task UpdateJourney(Journey dbJourney, Journey journey)
+
+
+        public async Task UpdateJourney(Journey journey)
         {
             context.Entry(journey).State = EntityState.Modified;
             await context.SaveChangesAsync();
@@ -48,67 +57,88 @@ namespace BikeappAPI.Repositories
         public async Task DeleteJourney(int journeyId)
         {
             var journey = await context.Journey.FindAsync(journeyId);
-            context.Journey.Remove(journey);
-            await context.SaveChangesAsync();
-        }
-
-        public async Task UploadJourneysFromCsv(IFormFile file)
-        {
-
-
-            using (var streamReader = new StreamReader(file.OpenReadStream()))
+            if (journey == null)
             {
-                var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    HeaderValidated = null,
-                    MissingFieldFound = null
-                };
+                //TODO: better null check?
+                Console.WriteLine("NotFound");
+                return;
+            }
+            else
+            {
 
-                var csvReader = new CsvReader(streamReader, csvConfig);
-                csvReader.Context.RegisterClassMap<JourneyMap>();
-
-                // Read the header record
-                var journeysList = new List<Journey>();
-
-                while (csvReader.Read())
-                {
-                    var journey = csvReader.GetRecord<Journey>();
-                    Guid guid = Guid.NewGuid();
-                    journey.JourneyId = guid;
-                    journeysList.Add(journey);
-                }
-
-                // Read the CSV file and convert each row to a Journey object
-                var journeys = csvReader.GetRecords<Journey>().ToList();
-
-                // Add the new journeys to the database
-                foreach (var journey in journeys)
-                {
-                    context.Journey.Add(journey);
-                }
+                context.Journey.Remove(journey);
                 await context.SaveChangesAsync();
             }
         }
 
-        internal Task UpdateJourney(Journey journey)
+        public async Task UploadJourneysFromCsv(List<Journey> journeys)
         {
-            throw new NotImplementedException();
-        }
+            string connectionString = configuration.GetConnectionString("Bikeapp");
 
-        private class JourneyMap : ClassMap<Journey>
-        {
-            public JourneyMap()
+            using (var connection = new SqlConnection(connectionString))
             {
-                Map(j => j.DepartureDate).Name("Departure");
-                Map(j => j.ReturnDate).Name("Return");
-                Map(j => j.DepartureStationId).Name("Departure station id");
-                Map(j => j.DepartureStationName).Name("Departure station name");
-                Map(j => j.ReturnStationId).Name("Return station id");
-                Map(j => j.ReturnStationName).Name("Return station name");
-                Map(j => j.Distance).Name("Covered distance (m)").TypeConverterOption.Format("0.##");
-                Map(j => j.Duration).Name("Duration (sec.)");
+                await connection.OpenAsync();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
+                        {
+
+                            bulkCopy.DestinationTableName = "Journey";
+
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.JourneyId), "JourneyId");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureDate), "Departure");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnDate), "Return");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureStationId), "Departure station id");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureStationName), "Departure station name");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnStationId), "Return station id");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnStationName), "Return station name");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.Distance), "Covered distance (m)");
+                            bulkCopy.ColumnMappings.Add(nameof(Journey.Duration), "Duration (sec.)");
 
 
+                            // Create a DataTable from the list of journeys
+                            var dt = new DataTable();
+                            dt.Columns.Add(nameof(Journey.JourneyId), typeof(Guid));
+                            dt.Columns.Add(nameof(Journey.DepartureDate), typeof(DateTime));
+                            dt.Columns.Add(nameof(Journey.ReturnDate), typeof(DateTime));
+                            dt.Columns.Add(nameof(Journey.DepartureStationId), typeof(int));
+                            dt.Columns.Add(nameof(Journey.DepartureStationName), typeof(string));
+                            dt.Columns.Add(nameof(Journey.ReturnStationId), typeof(int));
+                            dt.Columns.Add(nameof(Journey.ReturnStationName), typeof(string));
+                            dt.Columns.Add(nameof(Journey.Distance), typeof(decimal));
+                            dt.Columns.Add(nameof(Journey.Duration), typeof(int));
+
+                            foreach (var journey in journeys)
+                            {
+                                var row = dt.NewRow();
+                                row[nameof(Journey.JourneyId)] = journey.JourneyId;
+                                row[nameof(Journey.DepartureDate)] = journey.DepartureDate;
+                                row[nameof(Journey.ReturnDate)] = journey.ReturnDate;
+                                row[nameof(Journey.DepartureStationId)] = journey.DepartureStationId;
+                                row[nameof(Journey.DepartureStationName)] = journey.DepartureStationName;
+                                row[nameof(Journey.ReturnStationId)] = journey.ReturnStationId;
+                                row[nameof(Journey.ReturnStationName)] = journey.ReturnStationName;
+                                row[nameof(Journey.Distance)] = journey.Distance;
+                                row[nameof(Journey.Duration)] = journey.Duration;
+
+                                dt.Rows.Add(row);
+                            }
+                            await bulkCopy.WriteToServerAsync(dt);
+                        }
+
+                        // Commit the transaction
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        // Handle exception and rollback the transaction if necessary
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
     }

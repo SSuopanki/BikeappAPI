@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BikeappAPI.Models;
 using CsvHelper;
 using System.Globalization;
 using System.Data;
-using Microsoft.Data.SqlClient;
 using CsvHelper.Configuration;
 using BikeappAPI.Repositories;
 
@@ -21,12 +15,12 @@ namespace BikeappAPI.Controllers
     {
         private readonly JourneysRepository journeysRepository;
 
-        private readonly BikeappContext _context;
+        private readonly BikeappContext context;
 
-        public JourneysController(BikeappContext context)
+        public JourneysController(BikeappContext context, JourneysRepository journeysRepository)
         {
-            journeysRepository = new JourneysRepository(context);
-            _context = context;
+            this.journeysRepository = journeysRepository;
+            this.context = context;
         }
 
         // GET: api/Journeys
@@ -113,35 +107,104 @@ namespace BikeappAPI.Controllers
         [RequestSizeLimit(100000000)]
         public async Task<IActionResult> PostJourneys(IFormFile file)
         {
+            if (file == null || file.Length <= 0)
+            {
+                return BadRequest("No file uploaded.");
+            }
 
-            await journeysRepository.UploadJourneysFromCsv(file);
+            // Read the CSV file
+            using (var streamReader = new StreamReader(file.OpenReadStream()))
+            {
+                var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    HeaderValidated = null,
+                    MissingFieldFound = null
+                };
 
-            return Ok();
+                var csvReader = new CsvReader(streamReader, csvConfig);
+
+                // Read the header record
+                csvReader.Read();
+                csvReader.ReadHeader();
+
+                var headerRecords = csvReader.HeaderRecord;
+
+                if (headerRecords != null)
+                {
+                    // Check if all required columns are present
+                    var requiredColumns = new string[] { "Departure", "Return", "Departure station id", "Departure station name", "Return station id", "Return station name", "Covered distance (m)", "Duration (sec.)" };
+                    var missingColumns = requiredColumns.Where(column => !headerRecords.Contains(column)).ToList();
+
+                    if (missingColumns.Any())
+                    {
+                        return BadRequest($"Missing columns in CSV file: {string.Join(", ", missingColumns)}");
+                    }
+
+                    // Create a list to hold the Journey objects
+                    var journeys = new List<Journey>();
+
+                    // Read the CSV file and convert each row to a Journey object
+                    while (csvReader.Read())
+                    {
+                        var journey = new Journey
+                        {
+                            JourneyId = Guid.NewGuid(), // Generate a unique JourneyId
+                            DepartureDate = csvReader.GetField<DateTime>("Departure"),
+                            ReturnDate = csvReader.GetField<DateTime>("Return"),
+                            DepartureStationId = csvReader.GetField<int>("Departure station id"),
+                            DepartureStationName = csvReader.GetField<string>("Departure station name"),
+                            ReturnStationId = csvReader.GetField<int>("Return station id"),
+                            ReturnStationName = csvReader.GetField<string>("Return station name"),
+                            Distance = csvReader.GetField<decimal>("Covered distance (m)"),
+                            Duration = csvReader.GetField<int>("Duration (sec.)")
+                        };
+
+                        journeys.Add(journey);
+                    }
+
+                    // Pass the list of journeys to the repository method for database insertion
+                    await journeysRepository.UploadJourneysFromCsv(journeys);
+
+                    return Ok("Journeys uploaded successfully.");
+
+                }
+                else
+                {
+                    return BadRequest();
+
+
+
+            }
+
+
+            }
         }
 
         // DELETE: api/Journeys/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJourney(int id)
         {
-            if (_context.Journey == null)
+            if (context.Journey == null)
             {
                 return NotFound();
             }
-            var journey = await _context.Journey.FindAsync(id);
+            var journey = await context.Journey.FindAsync(id);
             if (journey == null)
             {
                 return NotFound();
             }
 
-            _context.Journey.Remove(journey);
-            await _context.SaveChangesAsync();
+            context.Journey.Remove(journey);
+            await context.SaveChangesAsync();
 
             return NoContent();
         }
 
+   
+
         private bool JourneyExists(Guid id)
         {
-            return (_context.Journey?.Any(e => e.JourneyId == id)).GetValueOrDefault();
+            return (context.Journey?.Any(e => e.JourneyId == id)).GetValueOrDefault();
         }
     }
 }

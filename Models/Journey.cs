@@ -12,7 +12,7 @@ namespace BikeappAPI.Models
         public string? DepartureStationName { get; set; }
         public int ReturnStationId { get; set; }
         public string? ReturnStationName { get; set; }
-        public double Distance { get; set; }
+        public decimal Distance { get; set; }
         public int Duration { get; set; }
     }
 }

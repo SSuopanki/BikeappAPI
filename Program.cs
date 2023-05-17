@@ -1,5 +1,10 @@
 using BikeappAPI.Models;
+using BikeappAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,18 +18,23 @@ builder.Services.AddCors(options =>
                           policy.WithOrigins("http://127.0.0.1:5173");
                       });
 });
-// Add services to the container.
+
+// Retrieve the connection string from appsettings.json
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+var connectionString = configuration.GetConnectionString("Bikeapp");
 
 builder.Services.AddDbContext<BikeappContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("Bikeapp")));
-
+    options.UseSqlServer(connectionString));
+builder.Services.AddScoped<JourneysRepository>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
-
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -32,6 +42,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseCors(AllowOrigins);
 
 app.UseHttpsRedirection();
