@@ -9,7 +9,8 @@ Frontend for this project can be found [here](https://github.com/SSuopanki/Bikea
 ## **TODO**
 - Connection to database (done)
 - Endpoint for adding cvs file(done)
-- Finish csv endpoint functionality
+- Finish csv endpoint functionality(done)
+- Add csv upload endpoint for Stations
 - Validation for data
 - New joyrney and station endpoints (done)
 - Update readme during project
