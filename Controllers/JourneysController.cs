@@ -6,6 +6,8 @@ using System.Globalization;
 using System.Data;
 using CsvHelper.Configuration;
 using BikeappAPI.Repositories;
+using Microsoft.AspNetCore.Http;
+using static BikeappAPI.Repositories.JourneysRepository;
 
 namespace BikeappAPI.Controllers
 {
@@ -105,79 +107,11 @@ namespace BikeappAPI.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("CSV")]
         [RequestSizeLimit(100000000)]
-        public async Task<IActionResult> PostJourneys(IFormFile file)
+        public async Task<IActionResult> PostJourneys(IFormFile formFile)
         {
-            if (file == null || file.Length <= 0)
-            {
-                return BadRequest("No file uploaded.");
-            }
+            await journeysRepository.UploadJourneysFromCsv(formFile);
 
-            // Read the CSV file
-            using (var streamReader = new StreamReader(file.OpenReadStream()))
-            {
-                var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    HeaderValidated = null,
-                    MissingFieldFound = null
-                };
-
-                var csvReader = new CsvReader(streamReader, csvConfig);
-
-                // Read the header record
-                csvReader.Read();
-                csvReader.ReadHeader();
-
-                var headerRecords = csvReader.HeaderRecord;
-
-                if (headerRecords != null)
-                {
-                    // Check if all required columns are present
-                    var requiredColumns = new string[] { "Departure", "Return", "Departure station id", "Departure station name", "Return station id", "Return station name", "Covered distance (m)", "Duration (sec.)" };
-                    var missingColumns = requiredColumns.Where(column => !headerRecords.Contains(column)).ToList();
-
-                    if (missingColumns.Any())
-                    {
-                        return BadRequest($"Missing columns in CSV file: {string.Join(", ", missingColumns)}");
-                    }
-
-                    // Create a list to hold the Journey objects
-                    var journeys = new List<Journey>();
-
-                    // Read the CSV file and convert each row to a Journey object
-                    while (csvReader.Read())
-                    {
-                        var journey = new Journey
-                        {
-                            JourneyId = Guid.NewGuid(), // Generate a unique JourneyId
-                            DepartureDate = csvReader.GetField<DateTime>("Departure"),
-                            ReturnDate = csvReader.GetField<DateTime>("Return"),
-                            DepartureStationId = csvReader.GetField<int>("Departure station id"),
-                            DepartureStationName = csvReader.GetField<string>("Departure station name"),
-                            ReturnStationId = csvReader.GetField<int>("Return station id"),
-                            ReturnStationName = csvReader.GetField<string>("Return station name"),
-                            Distance = csvReader.GetField<decimal>("Covered distance (m)"),
-                            Duration = csvReader.GetField<int>("Duration (sec.)")
-                        };
-
-                        journeys.Add(journey);
-                    }
-
-                    // Pass the list of journeys to the repository method for database insertion
-                    await journeysRepository.UploadJourneysFromCsv(journeys);
-
-                    return Ok("Journeys uploaded successfully.");
-
-                }
-                else
-                {
-                    return BadRequest();
-
-
-
-            }
-
-
-            }
+            return Ok("File uploaded succesfully");
         }
 
         // DELETE: api/Journeys/5
@@ -200,7 +134,7 @@ namespace BikeappAPI.Controllers
             return NoContent();
         }
 
-   
+
 
         private bool JourneyExists(Guid id)
         {

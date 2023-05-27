@@ -6,6 +6,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using CsvHelper.TypeConversion;
 using CsvHelper;
+using Microsoft.AspNetCore.Http;
 
 namespace BikeappAPI.Repositories
 {
@@ -71,74 +72,54 @@ namespace BikeappAPI.Repositories
             }
         }
 
-        public async Task UploadJourneysFromCsv(List<Journey> journeys)
+        public async Task UploadJourneysFromCsv(IFormFile formFile)
         {
-            string connectionString = configuration.GetConnectionString("Bikeapp");
+            var data = new MemoryStream();
+            await formFile.CopyToAsync(data);
 
-            using (var connection = new SqlConnection(connectionString))
+            data.Position = 0;
+
+            var bad = new List<string>();
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                await connection.OpenAsync();
-
-                using (var transaction = connection.BeginTransaction())
+                HasHeaderRecord = true,
+                HeaderValidated = null,
+                MissingFieldFound = null,
+                BadDataFound = context =>
                 {
-                    try
-                    {
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
-                        {
-
-                            bulkCopy.DestinationTableName = "Journey";
-
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.JourneyId), "JourneyId");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureDate), "Departure");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnDate), "Return");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureStationId), "Departure station id");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.DepartureStationName), "Departure station name");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnStationId), "Return station id");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.ReturnStationName), "Return station name");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.Distance), "Covered distance (m)");
-                            bulkCopy.ColumnMappings.Add(nameof(Journey.Duration), "Duration (sec.)");
-
-
-                            // Create a DataTable from the list of journeys
-                            var dt = new DataTable();
-                            dt.Columns.Add(nameof(Journey.JourneyId), typeof(Guid));
-                            dt.Columns.Add(nameof(Journey.DepartureDate), typeof(DateTime));
-                            dt.Columns.Add(nameof(Journey.ReturnDate), typeof(DateTime));
-                            dt.Columns.Add(nameof(Journey.DepartureStationId), typeof(int));
-                            dt.Columns.Add(nameof(Journey.DepartureStationName), typeof(string));
-                            dt.Columns.Add(nameof(Journey.ReturnStationId), typeof(int));
-                            dt.Columns.Add(nameof(Journey.ReturnStationName), typeof(string));
-                            dt.Columns.Add(nameof(Journey.Distance), typeof(decimal));
-                            dt.Columns.Add(nameof(Journey.Duration), typeof(int));
-
-                            foreach (var journey in journeys)
-                            {
-                                var row = dt.NewRow();
-                                row[nameof(Journey.JourneyId)] = journey.JourneyId;
-                                row[nameof(Journey.DepartureDate)] = journey.DepartureDate;
-                                row[nameof(Journey.ReturnDate)] = journey.ReturnDate;
-                                row[nameof(Journey.DepartureStationId)] = journey.DepartureStationId;
-                                row[nameof(Journey.DepartureStationName)] = journey.DepartureStationName;
-                                row[nameof(Journey.ReturnStationId)] = journey.ReturnStationId;
-                                row[nameof(Journey.ReturnStationName)] = journey.ReturnStationName;
-                                row[nameof(Journey.Distance)] = journey.Distance;
-                                row[nameof(Journey.Duration)] = journey.Duration;
-
-                                dt.Rows.Add(row);
-                            }
-                            await bulkCopy.WriteToServerAsync(dt);
-                        }
-
-                        // Commit the transaction
-                        transaction.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        // Handle exception and rollback the transaction if necessary
-                        transaction.Rollback();
-                        throw;
-                    }
+                     bad.Add(context.RawRecord);
                 }
+            };
+            using (TextReader reader = new StreamReader(data))
+            using (var csvReader = new CsvReader(reader, config))
+            {
+
+                csvReader.Context.RegisterClassMap<JourneyMap>();
+                var records = csvReader.GetRecords<Journey>().ToList();
+                foreach(Journey journey in records)
+                {
+                    journey.JourneyId = Guid.NewGuid();
+                }
+                await context.Journey.AddRangeAsync(records);
+                context.SaveChanges();
+            }
+
+            return;
+        }
+
+        public class JourneyMap : ClassMap<Journey>
+        {
+            public JourneyMap()
+            {
+                AutoMap(CultureInfo.InvariantCulture);
+                Map(m => m.DepartureDate).Name("Departure");
+                Map(m => m.ReturnDate).Name("Return");
+                Map(m => m.DepartureStationId).Name("Departure station id");
+                Map(m => m.DepartureStationName).Name("Departure station name");
+                Map(m => m.ReturnStationId).Name("Return station id");
+                Map(m => m.ReturnStationName).Name("Return station name");
+                Map(m => m.Distance).Name("Covered distance (m)").TypeConverter<DecimalConverter>();
+                Map(m => m.Duration).Name("Duration (sec.)").TypeConverter<Int32Converter>();
             }
         }
     }

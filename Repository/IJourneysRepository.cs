@@ -7,5 +7,5 @@ public interface IJourneysRepository
     Task CreateJourney(Journey journey);
     Task UpdateJourney(Journey journey);
     Task DeleteJourney(int journeyId);
-    Task UploadJourneysFromCsv(List<Journey> journeys);
+    Task UploadJourneysFromCsv(IFormFile formfile);
 }
