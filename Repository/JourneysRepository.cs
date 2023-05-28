@@ -2,11 +2,8 @@
 using CsvHelper.Configuration;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using Microsoft.Data.SqlClient;
-using System.Data;
 using CsvHelper.TypeConversion;
 using CsvHelper;
-using Microsoft.AspNetCore.Http;
 
 namespace BikeappAPI.Repositories
 {
@@ -26,7 +23,7 @@ namespace BikeappAPI.Repositories
             return await context.Journey.ToListAsync();
         }
 
-        public async Task<Journey> GetJourneyById(int journeyId)
+        public async Task<Journey> GetJourneyById(Guid journeyId)
         {
             var journey = await context.Journey.FindAsync(journeyId);
 
@@ -55,7 +52,7 @@ namespace BikeappAPI.Repositories
         }
 
 
-        public async Task DeleteJourney(int journeyId)
+        public async Task DeleteJourney(Guid journeyId)
         {
             var journey = await context.Journey.FindAsync(journeyId);
             if (journey == null)

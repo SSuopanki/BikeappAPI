@@ -1,5 +1,6 @@
 using BikeappAPI.Models;
 using BikeappAPI.Repositories;
+using BikeappAPI.Repository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,8 @@ var connectionString = configuration.GetConnectionString("Bikeapp");
 builder.Services.AddDbContext<BikeappContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddScoped<JourneysRepository>();
+builder.Services.AddScoped<StationsRepository>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

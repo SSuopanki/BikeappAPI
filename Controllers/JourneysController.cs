@@ -7,7 +7,6 @@ using System.Data;
 using CsvHelper.Configuration;
 using BikeappAPI.Repositories;
 using Microsoft.AspNetCore.Http;
-using static BikeappAPI.Repositories.JourneysRepository;
 
 namespace BikeappAPI.Controllers
 {
@@ -16,7 +15,6 @@ namespace BikeappAPI.Controllers
     public class JourneysController : ControllerBase
     {
         private readonly JourneysRepository journeysRepository;
-
         private readonly BikeappContext context;
 
         public JourneysController(BikeappContext context, JourneysRepository journeysRepository)
@@ -39,7 +37,7 @@ namespace BikeappAPI.Controllers
 
         // GET: api/Journeys/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Journey>> GetJourney(int id)
+        public async Task<ActionResult<Journey>> GetJourney(Guid id)
         {
             var journey = await journeysRepository.GetJourneyById(id);
             if (journey == null)
@@ -106,7 +104,7 @@ namespace BikeappAPI.Controllers
         // POST: api/UploadJoyrneys
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("CSV")]
-        [RequestSizeLimit(100000000)]
+        [RequestSizeLimit(10000000)]
         public async Task<IActionResult> PostJourneys(IFormFile formFile)
         {
             await journeysRepository.UploadJourneysFromCsv(formFile);
@@ -116,7 +114,7 @@ namespace BikeappAPI.Controllers
 
         // DELETE: api/Journeys/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteJourney(int id)
+        public async Task<IActionResult> DeleteJourney(Guid id)
         {
             if (context.Journey == null)
             {

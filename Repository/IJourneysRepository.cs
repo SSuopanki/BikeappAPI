@@ -3,9 +3,9 @@
 public interface IJourneysRepository 
 {
     Task<IEnumerable<Journey>> GetAllJourneys();
-    Task<Journey> GetJourneyById(int id);
+    Task<Journey> GetJourneyById(Guid journeyId);
     Task CreateJourney(Journey journey);
     Task UpdateJourney(Journey journey);
-    Task DeleteJourney(int journeyId);
+    Task DeleteJourney(Guid journeyId);
     Task UploadJourneysFromCsv(IFormFile formfile);
 }

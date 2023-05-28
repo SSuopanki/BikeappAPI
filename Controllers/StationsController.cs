@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using BikeappAPI.Models;
 using CsvHelper;
 using System.Globalization;
+using BikeappAPI.Repositories;
+using BikeappAPI.Repository;
 
 namespace BikeappAPI.Controllers
 {
@@ -15,40 +17,38 @@ namespace BikeappAPI.Controllers
     [ApiController]
     public class StationsController : ControllerBase
     {
-        private readonly BikeappContext _context;
+        private readonly StationsRepository stationsRepository;
+        private readonly BikeappContext context;
 
-        public StationsController(BikeappContext context)
+        public StationsController(BikeappContext context, StationsRepository stationsRepository)
         {
-            _context = context;
+            this.stationsRepository= stationsRepository;
+            this.context = context;
         }
 
         // GET: api/Stations
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Station>>> GetStation()
         {
-          if (_context.Station == null)
-          {
-              return NotFound();
-          }
-            return await _context.Station.ToListAsync();
+            var station = await stationsRepository.GetAllStations();
+            if (!station.Any())
+            {
+                return NotFound();
+            }
+            return Ok(station);
         }
 
         // GET: api/Stations/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Station>> GetStation(int id)
         {
-          if (_context.Station == null)
-          {
-              return NotFound();
-          }
-            var station = await _context.Station.FindAsync(id);
-
+            var station = await stationsRepository.GetStationById(id);
             if (station == null)
             {
                 return NotFound();
             }
 
-            return station;
+            return Ok(station);
         }
 
         // PUT: api/Stations/5
@@ -61,11 +61,9 @@ namespace BikeappAPI.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(station).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await stationsRepository.UpdateStation(station);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -87,18 +85,13 @@ namespace BikeappAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Station>> PostStation(Station station)
         {
-          if (_context.Station == null)
-          {
-              return Problem("Entity set 'BikeappContext.Station'  is null.");
-          }
-            _context.Station.Add(station);
             try
             {
-                await _context.SaveChangesAsync();
+                await stationsRepository.UpdateStation(station);
             }
             catch (DbUpdateException)
             {
-                if (StationExists(station.Id))
+                if (StationExists(  station.Id))
                 {
                     return Conflict();
                 }
@@ -108,56 +101,43 @@ namespace BikeappAPI.Controllers
                 }
             }
 
-            return CreatedAtAction("GetStation", new { id = station.Id }, station);
+            return CreatedAtAction("GetJourney", new { id = station.Id }, station);
         }
 
         // POST: api/UploadJoyrneys
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("CSV")]
-        public async Task<IActionResult> PostStations([FromForm] IFormFile file)
+        [RequestSizeLimit(10000000)]
+        public async Task<IActionResult> PostStations(IFormFile formFile)
         {
-            //Read the CSV file data into a MemoryStream
-            using (var stream = new MemoryStream())
-            {
-                await file.CopyToAsync(stream);
-                stream.Position = 0;
+            await stationsRepository.UploadStationsFromCsv(formFile);
 
-                //Read the CSV data from the MemoryStream using CsvHelper
-                using (var reader = new StreamReader(stream))
-                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-                {
-                    var records = csv.GetRecords<dynamic>().ToList();
-
-                    // TODO: Process the CSV data
-                }
-            }
-
-            return Ok();
+            return Ok("File uploaded succesfully");
         }
 
         // DELETE: api/Stations/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStation(int id)
         {
-            if (_context.Station == null)
+            if (context.Station == null)
             {
                 return NotFound();
             }
-            var station = await _context.Station.FindAsync(id);
+            var station = await context.Station.FindAsync(id);
             if (station == null)
             {
                 return NotFound();
             }
 
-            _context.Station.Remove(station);
-            await _context.SaveChangesAsync();
+            context.Station.Remove(station);
+            await context.SaveChangesAsync();
 
             return NoContent();
         }
 
         private bool StationExists(int id)
         {
-            return (_context.Station?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
+            return (context.Station?.Any(e => e.Id == id)).GetValueOrDefault();
+        }   
     }
 }

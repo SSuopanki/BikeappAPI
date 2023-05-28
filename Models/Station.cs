@@ -5,6 +5,7 @@ namespace BikeappAPI.Models
 {
     public partial class Station
     {
+        public int FId { get; set; }
         public int Id { get; set; }
         public string? Nimi { get; set; }
         public string? Namn { get; set; }
