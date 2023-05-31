@@ -85,7 +85,7 @@ namespace BikeappAPI.Repositories
                 MissingFieldFound = null,
                 BadDataFound = context =>
                 {
-                     bad.Add(context.RawRecord);
+                    bad.Add(context.RawRecord);
                 }
             };
             using (TextReader reader = new StreamReader(data))
@@ -94,7 +94,7 @@ namespace BikeappAPI.Repositories
 
                 csvReader.Context.RegisterClassMap<JourneyMap>();
                 var records = csvReader.GetRecords<Journey>().ToList();
-                foreach(Journey journey in records)
+                foreach (Journey journey in records)
                 {
                     journey.JourneyId = Guid.NewGuid();
                 }
@@ -116,8 +116,22 @@ namespace BikeappAPI.Repositories
                 Map(m => m.DepartureStationName).Name("Departure station name");
                 Map(m => m.ReturnStationId).Name("Return station id");
                 Map(m => m.ReturnStationName).Name("Return station name");
-                Map(m => m.Distance).Name("Covered distance (m)").TypeConverter<DecimalConverter>();
-                Map(m => m.Duration).Name("Duration (sec.)").TypeConverter<Int32Converter>();
+                Map(m => m.Distance).Name("Covered distance (m)").TypeConverter<DecimalConverter>().Validate(args =>
+                {
+                    if (!decimal.TryParse(args.Field, out decimal value))
+                    {
+                        return false;
+                    }
+                    return value > 10;
+                });
+                Map(m => m.Duration).Name("Duration (sec.)").TypeConverter<Int32Converter>().Validate(args =>
+                {
+                    if (!decimal.TryParse(args.Field, out decimal value))
+                    {
+                        return false;
+                    }
+                    return value > 10;
+                }); ;
             }
         }
     }
