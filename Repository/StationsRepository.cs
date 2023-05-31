@@ -3,6 +3,7 @@ using CsvHelper.Configuration;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using CsvHelper;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BikeappAPI.Repository
 {
@@ -38,8 +39,10 @@ namespace BikeappAPI.Repository
 
         public async Task CreateStation(Station station)
         {
+
             context.Station.Add(station);
             await context.SaveChangesAsync();
+
         }
 
         public async Task UpdateStation(Station station)

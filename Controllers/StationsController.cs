@@ -52,7 +52,6 @@ namespace BikeappAPI.Controllers
         }
 
         // PUT: api/Stations/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutStation(int id, Station station)
         {
@@ -81,13 +80,14 @@ namespace BikeappAPI.Controllers
         }
 
         // POST: api/Stations
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Station>> PostStation(Station station)
         {
             try
             {
-                await stationsRepository.UpdateStation(station);
+                if(station == null)
+                   return BadRequest();
+               await stationsRepository.CreateStation(station);
             }
             catch (DbUpdateException)
             {
@@ -101,11 +101,10 @@ namespace BikeappAPI.Controllers
                 }
             }
 
-            return CreatedAtAction("GetJourney", new { id = station.Id }, station);
+            return CreatedAtAction("GetStation", new { id = station.Id }, station);
         }
 
         // POST: api/UploadJoyrneys
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("CSV")]
         [RequestSizeLimit(10000000)]
         public async Task<IActionResult> PostStations(IFormFile formFile)
@@ -119,6 +118,9 @@ namespace BikeappAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStation(int id)
         {
+            //TODO: Use StationRepository instead of context
+
+
             if (context.Station == null)
             {
                 return NotFound();

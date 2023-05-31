@@ -45,6 +45,10 @@ namespace BikeappAPI.Models
 
             modelBuilder.Entity<Station>(entity =>
             {
+                entity.Property(e => e.FId)
+                   .ValueGeneratedNever()
+                   .HasColumnName("FId");
+
                 entity.Property(e => e.Id)
                     .ValueGeneratedNever()
                     .HasColumnName("ID");

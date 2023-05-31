@@ -7,6 +7,7 @@ using System.Data;
 using CsvHelper.Configuration;
 using BikeappAPI.Repositories;
 using Microsoft.AspNetCore.Http;
+using static System.Collections.Specialized.BitVector32;
 
 namespace BikeappAPI.Controllers
 {
@@ -49,7 +50,6 @@ namespace BikeappAPI.Controllers
         }
 
         // PUT: api/Journeys/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutJourney(Guid id, Journey journey)
         {
@@ -78,12 +78,13 @@ namespace BikeappAPI.Controllers
         }
 
         // POST: api/Journeys
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Journey>> PostJourney(Journey journey)
         {
             try
             {
+                if (journey == null)
+                    return BadRequest();
                 await journeysRepository.CreateJourney(journey);
             }
             catch (DbUpdateException)
@@ -116,6 +117,8 @@ namespace BikeappAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJourney(Guid id)
         {
+
+            //TODO: Use JourneyRepository instead of context
             if (context.Journey == null)
             {
                 return NotFound();

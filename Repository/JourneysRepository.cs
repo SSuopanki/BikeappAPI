@@ -39,6 +39,7 @@ namespace BikeappAPI.Repositories
 
         public async Task CreateJourney(Journey journey)
         {
+            journey.JourneyId = Guid.NewGuid();
             context.Journey.Add(journey);
             await context.SaveChangesAsync();
         }
