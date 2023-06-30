@@ -43,11 +43,15 @@ after you have created these tables connect API with connectionString. Add you o
 
 
 ## **TODO**
-- [x]Connection to database 
-- [x]Endpoint for adding cvs file
-- [x]Finish csv endpoint functionality
-- [x]Add csv upload endpoint for Stations
-- [x]Validation for data
-- [x]New joyrney and station endpoints 
-- [x]Update readme during project
-- [ ]fix few thing
+- [x] Connection to database 
+- [x] Endpoint for adding cvs file
+- [x] Finish csv endpoint functionality
+- [x] Add csv upload endpoint for Stations
+- [x] Validation for data
+- [x] New joyrney and station endpoints 
+- [x] Update readme during project
+- [ ] fix few thing
+- [ ] Add sql scripts
+- [ ] tests
+- [ ] code cleanup
+      
