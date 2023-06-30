@@ -54,4 +54,6 @@ after you have created these tables connect API with connectionString. Add you o
 - [ ] Add sql scripts
 - [ ] tests
 - [ ] code cleanup
+- [ ] better readme
+
       
